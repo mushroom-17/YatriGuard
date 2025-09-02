@@ -18,6 +18,11 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        // YatriGuard Custom Variants
+        emergency: "bg-gradient-emergency text-emergency-foreground hover:shadow-emergency shadow-lg border-2 border-white",
+        success: "bg-gradient-safe text-success-foreground hover:bg-success/90",
+        hero: "bg-white text-primary hover:bg-white/90 shadow-primary font-semibold",
+        verified: "bg-success/10 text-success border border-success/20 hover:bg-success/20",
       },
       size: {
         default: "h-10 px-4 py-2",
