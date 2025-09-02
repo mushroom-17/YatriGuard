@@ -1,15 +1,35 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Shield, Upload, Users, CheckCircle, ArrowRight, FileText, Smartphone } from "lucide-react";
+import { Shield, Upload, Users, CheckCircle, ArrowRight, FileText, Smartphone, User, Calendar, Heart, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
-type OnboardingStep = "id-upload" | "emergency-contacts" | "consent" | "blockchain-id";
+type OnboardingStep = "identity-verification" | "trip-details" | "emergency-safety" | "review-generate";
+
+interface PersonalDetails {
+  fullName: string;
+  dateOfBirth: string;
+  gender: string;
+  nationality: string;
+  email: string;
+  mobile: string;
+  otpVerified: boolean;
+}
+
+interface TripDetails {
+  arrivalDate: string;
+  departureDate: string;
+  destinations: string;
+  accommodations: string;
+  modeOfTravel: string;
+}
 
 interface EmergencyContact {
   name: string;
@@ -17,50 +37,93 @@ interface EmergencyContact {
   relation: string;
 }
 
+interface SafetyInfo {
+  primaryContact: EmergencyContact;
+  secondaryContact: EmergencyContact;
+  bloodGroup: string;
+  allergies: string;
+  locationSharingConsent: "family" | "authorities" | "none";
+}
+
 export const Onboarding: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [currentStep, setCurrentStep] = useState<OnboardingStep>("id-upload");
-  const [idDocument, setIdDocument] = useState<File | null>(null);
-  const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([
-    { name: "", phone: "", relation: "" },
-  ]);
-  const [consents, setConsents] = useState({
-    dataProcessing: false,
-    locationTracking: false,
-    emergencySharing: false,
-    blockchainStorage: false,
+  const [currentStep, setCurrentStep] = useState<OnboardingStep>("identity-verification");
+  
+  // Personal Details State
+  const [personalDetails, setPersonalDetails] = useState<PersonalDetails>({
+    fullName: "",
+    dateOfBirth: "",
+    gender: "",
+    nationality: "",
+    email: "",
+    mobile: "",
+    otpVerified: false,
   });
+  
+  // Trip Details State
+  const [tripDetails, setTripDetails] = useState<TripDetails>({
+    arrivalDate: "",
+    departureDate: "",
+    destinations: "",
+    accommodations: "",
+    modeOfTravel: "",
+  });
+  
+  // Safety Info State
+  const [safetyInfo, setSafetyInfo] = useState<SafetyInfo>({
+    primaryContact: { name: "", phone: "", relation: "" },
+    secondaryContact: { name: "", phone: "", relation: "" },
+    bloodGroup: "",
+    allergies: "",
+    locationSharingConsent: "none",
+  });
+  
+  // Documents State
+  const [idDocument, setIdDocument] = useState<File | null>(null);
+  const [selfieDocument, setSelfieDocument] = useState<File | null>(null);
+  const [finalConsent, setFinalConsent] = useState(false);
   const [isGeneratingId, setIsGeneratingId] = useState(false);
 
   const stepProgress = {
-    "id-upload": 25,
-    "emergency-contacts": 50,
-    "consent": 75,
-    "blockchain-id": 100,
+    "identity-verification": 25,
+    "trip-details": 50,
+    "emergency-safety": 75,
+    "review-generate": 100,
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, type: "id" | "selfie") => {
     const file = event.target.files?.[0];
     if (file) {
-      setIdDocument(file);
-      toast({
-        title: "Document Uploaded",
-        description: "Your ID document has been securely uploaded",
-      });
+      if (type === "id") {
+        setIdDocument(file);
+        toast({
+          title: "ID Document Uploaded",
+          description: "Your ID document has been securely uploaded",
+        });
+      } else {
+        setSelfieDocument(file);
+        toast({
+          title: "Selfie Uploaded",
+          description: "Your verification selfie has been uploaded",
+        });
+      }
     }
   };
 
-  const addEmergencyContact = () => {
-    if (emergencyContacts.length < 3) {
-      setEmergencyContacts([...emergencyContacts, { name: "", phone: "", relation: "" }]);
-    }
+  const sendOTP = () => {
+    toast({
+      title: "OTP Sent",
+      description: `Verification code sent to ${personalDetails.mobile}`,
+    });
   };
 
-  const updateEmergencyContact = (index: number, field: keyof EmergencyContact, value: string) => {
-    const updated = [...emergencyContacts];
-    updated[index][field] = value;
-    setEmergencyContacts(updated);
+  const verifyOTP = () => {
+    setPersonalDetails(prev => ({ ...prev, otpVerified: true }));
+    toast({
+      title: "Mobile Verified",
+      description: "Your mobile number has been successfully verified",
+    });
   };
 
   const generateBlockchainId = async () => {
@@ -72,7 +135,7 @@ export const Onboarding: React.FC = () => {
     const blockchainId = `YG-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
     
     toast({
-      title: "🔒 Blockchain ID Generated!",
+      title: "🔒 Digital Tourist ID Generated!",
       description: `Your secure ID: ${blockchainId}`,
       duration: 5000,
     });
@@ -86,7 +149,7 @@ export const Onboarding: React.FC = () => {
   };
 
   const nextStep = () => {
-    const steps: OnboardingStep[] = ["id-upload", "emergency-contacts", "consent", "blockchain-id"];
+    const steps: OnboardingStep[] = ["identity-verification", "trip-details", "emergency-safety", "review-generate"];
     const currentIndex = steps.indexOf(currentStep);
     if (currentIndex < steps.length - 1) {
       setCurrentStep(steps[currentIndex + 1]);
@@ -95,12 +158,18 @@ export const Onboarding: React.FC = () => {
 
   const canProceed = () => {
     switch (currentStep) {
-      case "id-upload":
-        return idDocument !== null;
-      case "emergency-contacts":
-        return emergencyContacts.some(contact => contact.name && contact.phone);
-      case "consent":
-        return Object.values(consents).every(consent => consent);
+      case "identity-verification":
+        return personalDetails.fullName && personalDetails.dateOfBirth && personalDetails.gender && 
+               personalDetails.nationality && personalDetails.email && personalDetails.mobile && 
+               personalDetails.otpVerified && idDocument && selfieDocument;
+      case "trip-details":
+        return tripDetails.arrivalDate && tripDetails.departureDate && tripDetails.destinations && 
+               tripDetails.accommodations && tripDetails.modeOfTravel;
+      case "emergency-safety":
+        return safetyInfo.primaryContact.name && safetyInfo.primaryContact.phone && 
+               safetyInfo.primaryContact.relation && safetyInfo.locationSharingConsent !== "none";
+      case "review-generate":
+        return finalConsent;
       default:
         return true;
     }
@@ -129,265 +198,467 @@ export const Onboarding: React.FC = () => {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
-        {/* ID Upload Step */}
-        {currentStep === "id-upload" && (
+        {/* Step 1: Identity Verification */}
+        {currentStep === "identity-verification" && (
           <Card className="max-w-2xl mx-auto">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <FileText className="w-6 h-6" />
-                <span>Upload ID Document</span>
+                <User className="w-6 h-6" />
+                <span>Identity & Verification</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <p className="text-muted-foreground">
-                Upload your Aadhaar Card, Passport, or other government-issued ID to verify your identity.
-                Your document will be encrypted and stored securely on blockchain.
-              </p>
-              
-              <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-                {idDocument ? (
-                  <div className="space-y-4">
-                    <CheckCircle className="w-12 h-12 text-success mx-auto" />
-                    <div>
-                      <p className="font-semibold">{idDocument.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {(idDocument.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <Upload className="w-12 h-12 text-muted-foreground mx-auto" />
-                    <div>
-                      <p className="font-semibold">Click to upload document</p>
-                      <p className="text-sm text-muted-foreground">
-                        Supports: JPG, PNG, PDF (Max 10MB)
-                      </p>
-                    </div>
-                  </div>
-                )}
-                <Input
-                  type="file"
-                  accept=".jpg,.jpeg,.png,.pdf"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  id="id-upload"
-                />
-                <Label htmlFor="id-upload" className="cursor-pointer">
-                  <Button variant="outline" className="mt-4">
-                    {idDocument ? "Change Document" : "Choose File"}
-                  </Button>
-                </Label>
-              </div>
-
-              <div className="bg-primary/5 p-4 rounded-lg">
-                <div className="flex items-start space-x-3">
-                  <Shield className="w-5 h-5 text-primary mt-0.5" />
-                  <div className="text-sm">
-                    <p className="font-semibold text-primary">Security Guarantee</p>
-                    <p className="text-muted-foreground">
-                      Your document is encrypted end-to-end and stored on blockchain. 
-                      Only you control access to this information.
-                    </p>
-                  </div>
+              <div className="grid gap-4">
+                <div>
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <Input
+                    id="fullName"
+                    value={personalDetails.fullName}
+                    onChange={(e) => setPersonalDetails(prev => ({ ...prev, fullName: e.target.value }))}
+                    placeholder="Enter your full name"
+                  />
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Emergency Contacts Step */}
-        {currentStep === "emergency-contacts" && (
-          <Card className="max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Users className="w-6 h-6" />
-                <span>Emergency Contacts</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <p className="text-muted-foreground">
-                Add up to 3 emergency contacts who will be notified in case of an emergency.
-                These contacts will receive your location and status updates.
-              </p>
-
-              {emergencyContacts.map((contact, index) => (
-                <div key={index} className="space-y-4 p-4 border border-border rounded-lg">
-                  <h4 className="font-semibold">Contact {index + 1}</h4>
-                  <div className="grid gap-4">
-                    <div>
-                      <Label htmlFor={`name-${index}`}>Full Name</Label>
-                      <Input
-                        id={`name-${index}`}
-                        value={contact.name}
-                        onChange={(e) => updateEmergencyContact(index, "name", e.target.value)}
-                        placeholder="Enter full name"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`phone-${index}`}>Phone Number</Label>
-                      <Input
-                        id={`phone-${index}`}
-                        value={contact.phone}
-                        onChange={(e) => updateEmergencyContact(index, "phone", e.target.value)}
-                        placeholder="+91 9876543210"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`relation-${index}`}>Relationship</Label>
-                      <Input
-                        id={`relation-${index}`}
-                        value={contact.relation}
-                        onChange={(e) => updateEmergencyContact(index, "relation", e.target.value)}
-                        placeholder="e.g., Parent, Spouse, Friend"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {emergencyContacts.length < 3 && (
-                <Button variant="outline" onClick={addEmergencyContact} className="w-full">
-                  <Users className="w-4 h-4 mr-2" />
-                  Add Another Contact
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Consent Step */}
-        {currentStep === "consent" && (
-          <Card className="max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <CheckCircle className="w-6 h-6" />
-                <span>Privacy & Consent</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <p className="text-muted-foreground">
-                Please review and accept the following permissions to activate your Digital Tourist ID.
-              </p>
-
-              <div className="space-y-4">
-                {[
-                  {
-                    key: "dataProcessing" as keyof typeof consents,
-                    title: "Data Processing",
-                    description: "Allow YatriGuard to process your ID and personal information for safety services",
-                  },
-                  {
-                    key: "locationTracking" as keyof typeof consents,
-                    title: "Location Tracking",
-                    description: "Enable real-time location sharing for emergency response and family updates",
-                  },
-                  {
-                    key: "emergencySharing" as keyof typeof consents,
-                    title: "Emergency Information Sharing",
-                    description: "Share your information with authorities and emergency contacts when needed",
-                  },
-                  {
-                    key: "blockchainStorage" as keyof typeof consents,
-                    title: "Blockchain Storage",
-                    description: "Store your Digital ID and incident logs on secure blockchain infrastructure",
-                  },
-                ].map((item, index) => (
-                  <div key={index} className="flex items-start space-x-3 p-4 border border-border rounded-lg">
-                    <Checkbox
-                      id={item.key}
-                      checked={consents[item.key]}
-                      onCheckedChange={(checked) => 
-                        setConsents(prev => ({ ...prev, [item.key]: checked === true }))
-                      }
-                      className="mt-1"
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                    <Input
+                      id="dateOfBirth"
+                      type="date"
+                      value={personalDetails.dateOfBirth}
+                      onChange={(e) => setPersonalDetails(prev => ({ ...prev, dateOfBirth: e.target.value }))}
                     />
-                    <div className="flex-1">
-                      <Label htmlFor={item.key} className="font-semibold cursor-pointer">
-                        {item.title}
-                      </Label>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {item.description}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="bg-success/5 p-4 rounded-lg border border-success/20">
-                <div className="flex items-start space-x-3">
-                  <Shield className="w-5 h-5 text-success mt-0.5" />
-                  <div className="text-sm">
-                    <p className="font-semibold text-success">Your Privacy is Protected</p>
-                    <p className="text-muted-foreground">
-                      You can revoke these permissions anytime in Settings. 
-                      Your data is encrypted and only used for your safety.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Blockchain ID Generation Step */}
-        {currentStep === "blockchain-id" && (
-          <Card className="max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Shield className="w-6 h-6" />
-                <span>Generate Blockchain ID</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6 text-center">
-              {!isGeneratingId ? (
-                <>
-                  <div className="space-y-4">
-                    <div className="w-20 h-20 bg-gradient-primary rounded-full flex items-center justify-center mx-auto">
-                      <Smartphone className="w-10 h-10 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold">Ready to Generate Your Digital ID</h3>
-                      <p className="text-muted-foreground">
-                        Your tamper-proof blockchain ID will be created using your verified information.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="bg-primary/5 p-4 rounded-lg text-left">
-                    <h4 className="font-semibold mb-2">Your Digital ID will include:</h4>
-                    <ul className="text-sm space-y-1 text-muted-foreground">
-                      <li>• Unique blockchain hash for verification</li>
-                      <li>• QR code for instant identification</li>
-                      <li>• Tamper-proof incident logging</li>
-                      <li>• Valid for entire trip duration</li>
-                    </ul>
-                  </div>
-
-                  <Button
-                    onClick={generateBlockchainId}
-                    size="lg"
-                    className="w-full bg-gradient-primary hover:shadow-primary"
-                  >
-                    <Shield className="w-5 h-5 mr-2" />
-                    Generate My Blockchain ID
-                  </Button>
-                </>
-              ) : (
-                <div className="space-y-6">
-                  <div className="w-20 h-20 bg-gradient-primary rounded-full flex items-center justify-center mx-auto animate-pulse">
-                    <Shield className="w-10 h-10 text-white animate-spin" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold">Generating Your Blockchain ID...</h3>
-                    <p className="text-muted-foreground">
-                      Please wait while we create your secure digital identity
+                    <Label>Gender</Label>
+                    <Select value={personalDetails.gender} onValueChange={(value) => setPersonalDetails(prev => ({ ...prev, gender: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Nationality</Label>
+                  <Select value={personalDetails.nationality} onValueChange={(value) => setPersonalDetails(prev => ({ ...prev, nationality: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select nationality" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="indian">Indian</SelectItem>
+                      <SelectItem value="us">United States</SelectItem>
+                      <SelectItem value="uk">United Kingdom</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="email">Email Address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={personalDetails.email}
+                    onChange={(e) => setPersonalDetails(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="your@email.com"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="mobile">Mobile Number</Label>
+                  <div className="flex space-x-2">
+                    <Input
+                      id="mobile"
+                      value={personalDetails.mobile}
+                      onChange={(e) => setPersonalDetails(prev => ({ ...prev, mobile: e.target.value }))}
+                      placeholder="+91 9876543210"
+                      className="flex-1"
+                    />
+                    {!personalDetails.otpVerified ? (
+                      <Button onClick={sendOTP} variant="outline" disabled={!personalDetails.mobile}>
+                        Send OTP
+                      </Button>
+                    ) : (
+                      <Button variant="outline" disabled className="text-success">
+                        ✓ Verified
+                      </Button>
+                    )}
+                  </div>
+                  {personalDetails.mobile && !personalDetails.otpVerified && (
+                    <div className="flex space-x-2 mt-2">
+                      <Input placeholder="Enter OTP" className="flex-1" />
+                      <Button onClick={verifyOTP} size="sm">Verify</Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Document Upload */}
+              <div className="space-y-4">
+                <h3 className="font-semibold">Upload Documents</h3>
+                
+                {/* ID Document */}
+                <div className="border-2 border-dashed border-border rounded-lg p-4">
+                  <div className="text-center space-y-3">
+                    {idDocument ? (
+                      <div className="space-y-2">
+                        <CheckCircle className="w-8 h-8 text-success mx-auto" />
+                        <p className="font-medium">{idDocument.name}</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <FileText className="w-8 h-8 text-muted-foreground mx-auto" />
+                        <p className="font-medium">Aadhaar Card / Passport</p>
+                      </div>
+                    )}
+                    <Input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.pdf"
+                      onChange={(e) => handleFileUpload(e, "id")}
+                      className="hidden"
+                      id="id-doc"
+                    />
+                    <Label htmlFor="id-doc">
+                      <Button variant="outline" size="sm">
+                        {idDocument ? "Change" : "Upload ID"}
+                      </Button>
+                    </Label>
+                  </div>
+                </div>
+
+                {/* Selfie */}
+                <div className="border-2 border-dashed border-border rounded-lg p-4">
+                  <div className="text-center space-y-3">
+                    {selfieDocument ? (
+                      <div className="space-y-2">
+                        <CheckCircle className="w-8 h-8 text-success mx-auto" />
+                        <p className="font-medium">Selfie uploaded</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <User className="w-8 h-8 text-muted-foreground mx-auto" />
+                        <p className="font-medium">Verification Selfie</p>
+                      </div>
+                    )}
+                    <Input
+                      type="file"
+                      accept=".jpg,.jpeg,.png"
+                      onChange={(e) => handleFileUpload(e, "selfie")}
+                      className="hidden"
+                      id="selfie"
+                    />
+                    <Label htmlFor="selfie">
+                      <Button variant="outline" size="sm">
+                        {selfieDocument ? "Retake" : "Take Selfie"}
+                      </Button>
+                    </Label>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 2: Trip Details */}
+        {currentStep === "trip-details" && (
+          <Card className="max-w-2xl mx-auto">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Calendar className="w-6 h-6" />
+                <span>Trip Details</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="arrivalDate">Arrival Date</Label>
+                    <Input
+                      id="arrivalDate"
+                      type="date"
+                      value={tripDetails.arrivalDate}
+                      onChange={(e) => setTripDetails(prev => ({ ...prev, arrivalDate: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="departureDate">Departure Date</Label>
+                    <Input
+                      id="departureDate"
+                      type="date"
+                      value={tripDetails.departureDate}
+                      onChange={(e) => setTripDetails(prev => ({ ...prev, departureDate: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="destinations">Planned Destinations</Label>
+                  <Textarea
+                    id="destinations"
+                    value={tripDetails.destinations}
+                    onChange={(e) => setTripDetails(prev => ({ ...prev, destinations: e.target.value }))}
+                    placeholder="e.g., Mumbai, Goa, Kerala (include cities, attractions, hotels)"
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <Label>Mode of Travel</Label>
+                  <Select value={tripDetails.modeOfTravel} onValueChange={(value) => setTripDetails(prev => ({ ...prev, modeOfTravel: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select mode of travel" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="flight">Flight</SelectItem>
+                      <SelectItem value="train">Train</SelectItem>
+                      <SelectItem value="road">Road/Car</SelectItem>
+                      <SelectItem value="mixed">Mixed (Flight + Road/Train)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="accommodations">Accommodation Details</Label>
+                  <Textarea
+                    id="accommodations"
+                    value={tripDetails.accommodations}
+                    onChange={(e) => setTripDetails(prev => ({ ...prev, accommodations: e.target.value }))}
+                    placeholder="Hotel names, addresses, booking confirmations"
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 3: Emergency & Safety Info */}
+        {currentStep === "emergency-safety" && (
+          <Card className="max-w-2xl mx-auto">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Heart className="w-6 h-6" />
+                <span>Emergency & Safety Info</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-6">
+                {/* Primary Contact */}
+                <div className="border border-border rounded-lg p-4 space-y-4">
+                  <h3 className="font-semibold text-emergency">Primary Emergency Contact</h3>
+                  <div className="grid gap-4">
+                    <Input
+                      placeholder="Full Name"
+                      value={safetyInfo.primaryContact.name}
+                      onChange={(e) => setSafetyInfo(prev => ({ 
+                        ...prev, 
+                        primaryContact: { ...prev.primaryContact, name: e.target.value }
+                      }))}
+                    />
+                    <Input
+                      placeholder="Phone Number"
+                      value={safetyInfo.primaryContact.phone}
+                      onChange={(e) => setSafetyInfo(prev => ({ 
+                        ...prev, 
+                        primaryContact: { ...prev.primaryContact, phone: e.target.value }
+                      }))}
+                    />
+                    <Input
+                      placeholder="Relationship (e.g., Parent, Spouse)"
+                      value={safetyInfo.primaryContact.relation}
+                      onChange={(e) => setSafetyInfo(prev => ({ 
+                        ...prev, 
+                        primaryContact: { ...prev.primaryContact, relation: e.target.value }
+                      }))}
+                    />
+                  </div>
+                </div>
+
+                {/* Secondary Contact */}
+                <div className="border border-border rounded-lg p-4 space-y-4">
+                  <h3 className="font-semibold">Secondary Contact (Optional)</h3>
+                  <div className="grid gap-4">
+                    <Input
+                      placeholder="Full Name"
+                      value={safetyInfo.secondaryContact.name}
+                      onChange={(e) => setSafetyInfo(prev => ({ 
+                        ...prev, 
+                        secondaryContact: { ...prev.secondaryContact, name: e.target.value }
+                      }))}
+                    />
+                    <Input
+                      placeholder="Phone Number"
+                      value={safetyInfo.secondaryContact.phone}
+                      onChange={(e) => setSafetyInfo(prev => ({ 
+                        ...prev, 
+                        secondaryContact: { ...prev.secondaryContact, phone: e.target.value }
+                      }))}
+                    />
+                    <Input
+                      placeholder="Relationship"
+                      value={safetyInfo.secondaryContact.relation}
+                      onChange={(e) => setSafetyInfo(prev => ({ 
+                        ...prev, 
+                        secondaryContact: { ...prev.secondaryContact, relation: e.target.value }
+                      }))}
+                    />
+                  </div>
+                </div>
+
+                {/* Health Info */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold">Health Information (Optional)</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Blood Group</Label>
+                      <Select value={safetyInfo.bloodGroup} onValueChange={(value) => setSafetyInfo(prev => ({ ...prev, bloodGroup: value }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="A+">A+</SelectItem>
+                          <SelectItem value="A-">A-</SelectItem>
+                          <SelectItem value="B+">B+</SelectItem>
+                          <SelectItem value="B-">B-</SelectItem>
+                          <SelectItem value="AB+">AB+</SelectItem>
+                          <SelectItem value="AB-">AB-</SelectItem>
+                          <SelectItem value="O+">O+</SelectItem>
+                          <SelectItem value="O-">O-</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="allergies">Allergies</Label>
+                      <Input
+                        id="allergies"
+                        value={safetyInfo.allergies}
+                        onChange={(e) => setSafetyInfo(prev => ({ ...prev, allergies: e.target.value }))}
+                        placeholder="e.g., Peanuts, Shellfish"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Location Sharing */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold">Location Sharing Consent</h3>
+                  <div className="space-y-3">
+                    {[
+                      { value: "family" as const, label: "Family Members Only", desc: "Share location with emergency contacts" },
+                      { value: "authorities" as const, label: "Authorities & Family", desc: "Share with police, tourism dept, and contacts" },
+                      { value: "none" as const, label: "Emergency Only", desc: "Share only during active SOS situations" },
+                    ].map(option => (
+                      <div key={option.value} className="flex items-start space-x-3 p-3 border border-border rounded-lg">
+                        <input
+                          type="radio"
+                          id={option.value}
+                          name="locationConsent"
+                          checked={safetyInfo.locationSharingConsent === option.value}
+                          onChange={() => setSafetyInfo(prev => ({ ...prev, locationSharingConsent: option.value }))}
+                          className="mt-1"
+                        />
+                        <div>
+                          <Label htmlFor={option.value} className="font-medium cursor-pointer">
+                            {option.label}
+                          </Label>
+                          <p className="text-sm text-muted-foreground">{option.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 4: Review & Generate */}
+        {currentStep === "review-generate" && (
+          <Card className="max-w-2xl mx-auto">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Eye className="w-6 h-6" />
+                <span>Review & Generate ID</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Review Summary */}
+              <div className="space-y-4">
+                <div className="bg-muted p-4 rounded-lg">
+                  <h3 className="font-semibold mb-2">Personal Details</h3>
+                  <div className="text-sm space-y-1">
+                    <p><strong>Name:</strong> {personalDetails.fullName}</p>
+                    <p><strong>DOB:</strong> {personalDetails.dateOfBirth}</p>
+                    <p><strong>Nationality:</strong> {personalDetails.nationality}</p>
+                    <p><strong>Email:</strong> {personalDetails.email}</p>
+                    <p><strong>Mobile:</strong> {personalDetails.mobile} ✓</p>
+                  </div>
+                </div>
+
+                <div className="bg-muted p-4 rounded-lg">
+                  <h3 className="font-semibold mb-2">Trip Information</h3>
+                  <div className="text-sm space-y-1">
+                    <p><strong>Duration:</strong> {tripDetails.arrivalDate} to {tripDetails.departureDate}</p>
+                    <p><strong>Destinations:</strong> {tripDetails.destinations}</p>
+                    <p><strong>Travel Mode:</strong> {tripDetails.modeOfTravel}</p>
+                  </div>
+                </div>
+
+                <div className="bg-muted p-4 rounded-lg">
+                  <h3 className="font-semibold mb-2">Emergency Contact</h3>
+                  <div className="text-sm space-y-1">
+                    <p><strong>Primary:</strong> {safetyInfo.primaryContact.name} ({safetyInfo.primaryContact.relation})</p>
+                    <p><strong>Phone:</strong> {safetyInfo.primaryContact.phone}</p>
+                    <p><strong>Location Sharing:</strong> {safetyInfo.locationSharingConsent}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Consent */}
+              <div className="border border-border rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <Checkbox
+                    id="finalConsent"
+                    checked={finalConsent}
+                    onCheckedChange={(checked) => setFinalConsent(checked === true)}
+                  />
+                  <div>
+                    <Label htmlFor="finalConsent" className="font-medium cursor-pointer">
+                      I agree to secure storage on blockchain for trip duration
+                    </Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Your Digital Tourist ID will be stored securely on blockchain and is valid until your departure date. 
+                      You can revoke access anytime.
                     </p>
                   </div>
-                  <div className="space-y-2">
-                    <div className="animate-pulse">🔐 Encrypting your data...</div>
-                    <div className="animate-pulse">⚡ Creating blockchain hash...</div>
-                    <div className="animate-pulse">🎫 Generating QR code...</div>
+                </div>
+              </div>
+
+              {/* Generate Button */}
+              {!isGeneratingId ? (
+                <Button
+                  onClick={generateBlockchainId}
+                  disabled={!finalConsent}
+                  size="lg"
+                  className="w-full bg-gradient-primary hover:shadow-primary"
+                >
+                  <Shield className="w-5 h-5 mr-2" />
+                  Generate My Digital Tourist ID
+                </Button>
+              ) : (
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto animate-pulse">
+                    <Shield className="w-8 h-8 text-white animate-spin" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold">Generating Your Digital ID...</h3>
+                    <p className="text-sm text-muted-foreground">Creating blockchain-secured tourist identity</p>
                   </div>
                 </div>
               )}
@@ -396,7 +667,7 @@ export const Onboarding: React.FC = () => {
         )}
 
         {/* Navigation */}
-        {currentStep !== "blockchain-id" && (
+        {currentStep !== "review-generate" && (
           <div className="max-w-2xl mx-auto mt-8 text-center">
             <Button
               onClick={nextStep}
