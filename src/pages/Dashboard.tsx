@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Shield, QrCode, MapPin, AlertTriangle, Clock, Users, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,20 +30,72 @@ const mockAlerts: Alert[] = [
   },
 ];
 
+type SavedId = {
+  idNumber: string;
+  docHash?: string;
+  fullName?: string;
+  arrival?: string; // ISO
+  departure?: string; // ISO
+  destinations?: string[];
+  travelMode?: string;
+  accommodationName?: string;
+  accommodationAddress?: string;
+  bookingRef?: string;
+  emergencyPrimaryName?: string;
+  emergencyPrimaryPhone?: string;
+  locationConsent?: string;
+};
+
+type Profile = {
+  fullName?: string;
+  email?: string;
+};
+
 export const Dashboard: React.FC = () => {
   const [safetyScore] = useState(92);
-  const [activeTrip] = useState({
-    destination: "Rajasthan Heritage Tour",
-    duration: "7 days",
-    progress: 45,
-  });
+  const [saved, setSaved] = useState<SavedId | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("yg_digital_id");
+      if (raw) setSaved(JSON.parse(raw));
+    } catch {
+      // ignore
+    }
+    try {
+      const p = localStorage.getItem("yg_profile");
+      if (p) setProfile(JSON.parse(p));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const activeTrip = useMemo(() => {
+    const arrival = saved?.arrival ? new Date(saved.arrival) : undefined;
+    const departure = saved?.departure ? new Date(saved.departure) : undefined;
+    let duration = "--";
+    if (arrival && departure) {
+      const ms = Math.max(0, departure.getTime() - arrival.getTime());
+      const days = Math.max(1, Math.ceil(ms / (1000 * 60 * 60 * 24)));
+      duration = `${days} day${days > 1 ? "s" : ""}`;
+    }
+    const destination = (saved?.destinations && saved.destinations.length > 0)
+      ? saved.destinations.join(", ")
+      : "No trip set";
+    return {
+      destination,
+      duration,
+      progress: 50,
+    };
+  }, [saved]);
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Welcome back, Priya!</h1>
+          <h1 className="text-2xl font-bold">Welcome back{(saved?.fullName || profile?.fullName) ? `, ${saved?.fullName ?? profile?.fullName}` : ""}!</h1>
           <p className="text-muted-foreground">Your safety is secured by blockchain</p>
         </div>
         <Button variant="outline" size="sm" className="border-success text-success">
@@ -70,15 +122,15 @@ export const Dashboard: React.FC = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-white/80 text-sm">ID Number</p>
-              <p className="font-mono text-lg">YG-2024-789123</p>
+              <p className="font-mono text-lg">{saved?.idNumber ?? "—"}</p>
             </div>
             <div>
               <p className="text-white/80 text-sm">Valid Until</p>
-              <p className="font-semibold">Dec 31, 2024</p>
+              <p className="font-semibold">{saved?.departure ? new Date(saved.departure).toLocaleDateString() : "—"}</p>
             </div>
             <div>
               <p className="text-white/80 text-sm">Document Hash</p>
-              <p className="font-mono text-xs">0x4a7b...9c2e</p>
+              <p className="font-mono text-xs">{saved?.docHash ?? "—"}</p>
             </div>
             <div className="flex items-center space-x-2">
               <Shield className="w-4 h-4 text-success" />

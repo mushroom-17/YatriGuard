@@ -54,122 +54,152 @@ export const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-gradient-hero text-primary-foreground">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex justify-between items-center mb-8">
-            <div className="flex items-center space-x-3">
-              <Shield className="w-8 h-8" />
-              <h1 className="text-2xl font-bold">YatriGuard</h1>
+      <header className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary to-primary/90" />
+        <div className="relative">
+          <div className="container mx-auto px-4 py-6">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-3 text-primary-foreground">
+                <div className="w-9 h-9 rounded-lg bg-white/10 grid place-items-center">
+                  <Shield className="w-5 h-5" />
+                </div>
+                <h1 className="text-2xl font-bold">YatriGuard</h1>
+              </div>
+              <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+                <SelectTrigger className="w-36 bg-white/10 border-white/20 text-white">
+                  <Globe className="w-4 h-4 mr-2" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {languages.map((lang) => (
+                    <SelectItem key={lang.code} value={lang.code}>
+                      {lang.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-              <SelectTrigger className="w-32 bg-white/10 border-white/20 text-white">
-                <Globe className="w-4 h-4 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {languages.map((lang) => (
-                  <SelectItem key={lang.code} value={lang.code}>
-                    {lang.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
 
-          {/* Hero Section */}
-          <div className="text-center mb-8">
-            <h2 className="text-4xl font-bold mb-4">
-              Travel Safe, Stay Connected
-            </h2>
-            <p className="text-xl text-primary-foreground/90 mb-8 max-w-2xl mx-auto">
-              India's first blockchain-powered tourist safety app. Get verified digital ID, 
-              instant emergency help, and peace of mind for you and your family.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                onClick={() => navigate("/onboarding")}
-                size="lg"
-                className="bg-white text-primary hover:bg-white/90 font-semibold shadow-lg"
-              >
-                Get Started - Create Digital ID
-              </Button>
-              <Button
-                onClick={() => navigate("/dashboard")}
-                variant="outline"
-                size="lg"
-                className="border-white text-white hover:bg-white/10"
-              >
-                I Already Have an Account
-              </Button>
+            {/* Hero */}
+            <div className="grid lg:grid-cols-2 gap-8 items-center mt-12">
+              <div className="text-primary-foreground">
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-sm mb-4">
+                  <CheckCircle className="w-4 h-4 text-success" />
+                  <span>Government-aligned • Privacy-first</span>
+                </div>
+                <h2 className="text-4xl sm:text-5xl font-extrabold leading-tight mb-4">
+                  Guarding Tourists, Growing Tourism.
+                </h2>
+                <p className="text-base sm:text-lg text-white/90 mb-8 max-w-2xl">
+                  India's first blockchain-powered tourist safety app. Get your digital ID, receive instant SOS support, and share trip status securely with your family.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Button
+                    onClick={() => navigate("/digital-id")}
+                    size="lg"
+                    className="bg-white text-primary hover:bg-white/90 font-semibold shadow-lg"
+                  >
+                    Get Started — Create Digital ID
+                  </Button>
+                  <Button
+                    onClick={() => navigate("/signin")}
+                    size="lg"
+                    className="bg-white text-primary hover:bg-white/90 font-semibold shadow-lg"
+                  >
+                    Sign Up
+                  </Button>
+                </div>
+
+                {/* Stats */}
+                <div className="mt-10 grid grid-cols-3 gap-6 text-white/90">
+                  <div>
+                    <div className="text-2xl font-bold">50k+</div>
+                    <div className="text-sm">Travelers</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold">24/7</div>
+                    <div className="text-sm">Emergency Support</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold">11</div>
+                    <div className="text-sm">Languages</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative hidden lg:block">
+                <div className="absolute -inset-6 bg-white/10 rounded-3xl blur-2xl" />
+                <div className="relative rounded-2xl overflow-hidden ring-1 ring-white/15 shadow-2xl">
+                  <img src={heroImage} alt="YatriGuard" className="w-full h-[380px] object-cover" />
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Hero Image */}
-      <div className="relative h-64 overflow-hidden">
-        <img
-          src={heroImage}
-          alt="YatriGuard - Tourist Safety in India"
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-background/50 to-transparent" />
-      </div>
-
-      {/* Features Section */}
-      <section className="container mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <h3 className="text-3xl font-bold mb-4">Why Choose YatriGuard?</h3>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Built with cutting-edge blockchain technology and government partnerships 
-            to ensure your safety is our top priority.
+      {/* Features */}
+      <section className="container mx-auto px-4 py-14">
+        <div className="text-center mb-10">
+          <h3 className="text-3xl font-bold mb-3">Built for Peace of Mind</h3>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            YatriGuard brings together verified identity, proactive safety, and seamless sharing — all secured by modern cryptography.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((feature, index) => (
-            <Card key={index} className="shadow-card hover:shadow-primary transition-all duration-300">
-              <CardHeader className="text-center pb-2">
-                <div className="mx-auto w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center mb-4">
-                  <feature.icon className="w-6 h-6 text-white" />
+            <Card key={index} className="shadow-card hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-2">
+                <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-3">
+                  <feature.icon className="w-5 h-5" />
                 </div>
                 <CardTitle className="text-lg">{feature.title}</CardTitle>
               </CardHeader>
-              <CardContent className="text-center">
-                <p className="text-muted-foreground mb-3">{feature.description}</p>
-                {feature.verified && (
-                  <div className="flex items-center justify-center text-success text-sm">
-                    <CheckCircle className="w-4 h-4 mr-1" />
-                    <span>Blockchain Verified</span>
-                  </div>
-                )}
+              <CardContent>
+                <p className="text-muted-foreground text-sm leading-relaxed">{feature.description}</p>
               </CardContent>
             </Card>
           ))}
         </div>
+      </section>
 
-        {/* Trust Indicators */}
-        <div className="bg-success/5 rounded-lg p-8 text-center">
-          <h4 className="text-2xl font-bold mb-4">Trusted by 50,000+ Travelers</h4>
-          <p className="text-muted-foreground mb-6">
-            Government-approved • Privacy-first • 24/7 Emergency Response
-          </p>
-          <div className="flex justify-center items-center space-x-8 text-sm">
-            <div className="flex items-center space-x-2">
-              <Shield className="w-5 h-5 text-success" />
-              <span>ISO 27001 Certified</span>
+      {/* Closing CTA removed per request */}
+
+      {/* Footer */}
+      <footer className="border-t bg-muted/30">
+        <div className="container mx-auto px-4 py-10">
+          <div className="grid md:grid-cols-3 gap-8">
+            <div>
+              <div className="flex items-center space-x-2 mb-3">
+                <Shield className="w-5 h-5 text-primary" />
+                <span className="font-semibold">YatriGuard</span>
+              </div>
+              <p className="text-sm text-muted-foreground">Blockchain-powered safety platform for travelers and families.</p>
             </div>
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="w-5 h-5 text-success" />
-              <span>Government Partnership</span>
+            <div>
+              <h5 className="font-semibold mb-3">Product</h5>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><button onClick={() => navigate('/digital-id')} className="hover:text-foreground">Digital ID</button></li>
+                <li><button onClick={() => navigate('/map')} className="hover:text-foreground">Safety Map</button></li>
+                <li><button onClick={() => navigate('/dashboard')} className="hover:text-foreground">Dashboard</button></li>
+              </ul>
             </div>
-            <div className="flex items-center space-x-2">
-              <Globe className="w-5 h-5 text-success" />
-              <span>11 Languages Support</span>
+            <div>
+              <h5 className="font-semibold mb-3">Resources</h5>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>Privacy & Security</li>
+                <li>Help Center</li>
+                <li>Contact Support</li>
+              </ul>
             </div>
           </div>
+          <div className="mt-8 border-t pt-6 text-xs text-muted-foreground flex items-center justify-between">
+            <span>© {new Date().getFullYear()} YatriGuard. All rights reserved.</span>
+            <span>Made with care for travelers</span>
+          </div>
         </div>
-      </section>
+      </footer>
     </div>
   );
 };

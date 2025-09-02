@@ -9,6 +9,8 @@ import Dashboard from "./pages/Dashboard";
 import Map from "./pages/Map";
 import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
+import DigitalID from "./pages/DigitalID";
+import SignIn from "./pages/SignIn";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +23,22 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/onboarding" element={<Onboarding />} />
+          <Route 
+            path="/digital-id"
+            element={
+              <YatriGuardLayout>
+                <DigitalID />
+              </YatriGuardLayout>
+            }
+          />
+          <Route 
+            path="/signin"
+            element={
+              <YatriGuardLayout>
+                <SignIn />
+              </YatriGuardLayout>
+            }
+          />
           <Route 
             path="/dashboard" 
             element={
