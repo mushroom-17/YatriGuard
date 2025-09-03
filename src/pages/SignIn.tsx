@@ -7,16 +7,24 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { useI18n } from "@/i18n/I18nProvider";
 
-const schema = z.object({
-  fullName: z.string().min(2, "Enter your name"),
-  email: z.string().email("Enter a valid email"),
-});
-
-export type SignInValues = z.infer<typeof schema>;
+export type SignInValues = {
+  fullName: string;
+  email: string;
+};
 
 const SignIn: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useI18n();
+  const schema = z.object({
+    fullName: z
+      .string()
+      .min(2, t('val.signin.name.required')),
+    email: z
+      .string()
+      .email(t('val.signin.email.invalid')),
+  });
   const form = useForm<SignInValues>({
     resolver: zodResolver(schema),
     defaultValues: { fullName: "", email: "" },
@@ -37,7 +45,7 @@ const SignIn: React.FC = () => {
     <div className="container mx-auto max-w-md px-4 py-10">
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle>Sign In</CardTitle>
+          <CardTitle>{t('signin.title')}</CardTitle>
         </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -47,9 +55,9 @@ const SignIn: React.FC = () => {
                 name="fullName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Full Name</FormLabel>
+                    <FormLabel>{t('signin.fullName.label')}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Your name" {...field} />
+                      <Input placeholder={t('signin.fullName.placeholder')} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -60,9 +68,9 @@ const SignIn: React.FC = () => {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>{t('signin.email.label')}</FormLabel>
                     <FormControl>
-                      <Input placeholder="you@example.com" type="email" {...field} />
+                      <Input placeholder={t('signin.email.placeholder')} type="email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -70,7 +78,7 @@ const SignIn: React.FC = () => {
               />
             </CardContent>
             <CardFooter className="flex justify-end">
-              <Button type="submit">Sign In</Button>
+              <Button type="submit">{t('signin.submit')}</Button>
             </CardFooter>
           </form>
         </Form>

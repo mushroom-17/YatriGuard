@@ -1,24 +1,11 @@
-import React, { useState } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Shield, Globe, Users, MapPin, AlertTriangle, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import heroImage from "@/assets/hero-image.jpg";
-
-const languages = [
-  { code: "en", name: "English" },
-  { code: "hi", name: "हिंदी" },
-  { code: "bn", name: "বাংলা" },
-  { code: "te", name: "తెలుగు" },
-  { code: "mr", name: "मराठी" },
-  { code: "ta", name: "தமிழ்" },
-  { code: "gu", name: "ગુજરાતી" },
-  { code: "kn", name: "ಕನ್ನಡ" },
-  { code: "ml", name: "മലയാളം" },
-  { code: "pa", name: "ਪੰਜਾਬੀ" },
-  { code: "or", name: "ଓଡ଼ିଆ" },
-];
+import { useI18n } from "@/i18n/I18nProvider";
+import { languages as languageOptions } from "@/i18n/translations";
 
 const features = [
   {
@@ -49,7 +36,7 @@ const features = [
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
-  const [selectedLanguage, setSelectedLanguage] = useState("en");
+  const { t, lang, setLang } = useI18n();
 
   return (
     <div className="min-h-screen bg-background">
@@ -63,17 +50,17 @@ export const Home: React.FC = () => {
                 <div className="w-9 h-9 rounded-lg bg-white/10 grid place-items-center">
                   <Shield className="w-5 h-5" />
                 </div>
-                <h1 className="text-2xl font-bold">YatriGuard</h1>
+                <h1 className="text-2xl font-bold">{t('brand.name')}</h1>
               </div>
-              <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+              <Select value={lang} onValueChange={(val) => setLang(val as any)}>
                 <SelectTrigger className="w-36 bg-white/10 border-white/20 text-white">
                   <Globe className="w-4 h-4 mr-2" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {languages.map((lang) => (
-                    <SelectItem key={lang.code} value={lang.code}>
-                      {lang.name}
+                  {languageOptions.map((opt) => (
+                    <SelectItem key={opt.code} value={opt.code}>
+                      {opt.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -85,13 +72,13 @@ export const Home: React.FC = () => {
               <div className="text-primary-foreground">
                 <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-sm mb-4">
                   <CheckCircle className="w-4 h-4 text-success" />
-                  <span>Government-aligned • Privacy-first</span>
+                  <span>{t('hero.badge')}</span>
                 </div>
                 <h2 className="text-4xl sm:text-5xl font-extrabold leading-tight mb-4">
-                  Guarding Tourists, Growing Tourism.
+                  {t('hero.title')}
                 </h2>
                 <p className="text-base sm:text-lg text-white/90 mb-8 max-w-2xl">
-                  India's first blockchain-powered tourist safety app. Get your digital ID, receive instant SOS support, and share trip status securely with your family.
+                  {t('hero.subtitle')}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Button
@@ -99,14 +86,14 @@ export const Home: React.FC = () => {
                     size="lg"
                     className="bg-white text-primary hover:bg-white/90 font-semibold shadow-lg"
                   >
-                    Get Started — Create Digital ID
+                    {t('hero.cta.getId')}
                   </Button>
                   <Button
                     onClick={() => navigate("/signin")}
                     size="lg"
                     className="bg-white text-primary hover:bg-white/90 font-semibold shadow-lg"
                   >
-                    Sign Up
+                    {t('hero.cta.signup')}
                   </Button>
                 </div>
 
@@ -114,15 +101,15 @@ export const Home: React.FC = () => {
                 <div className="mt-10 grid grid-cols-3 gap-6 text-white/90">
                   <div>
                     <div className="text-2xl font-bold">50k+</div>
-                    <div className="text-sm">Travelers</div>
+                    <div className="text-sm">{t('hero.stat.travelers')}</div>
                   </div>
                   <div>
                     <div className="text-2xl font-bold">24/7</div>
-                    <div className="text-sm">Emergency Support</div>
+                    <div className="text-sm">{t('hero.stat.emergency')}</div>
                   </div>
                   <div>
                     <div className="text-2xl font-bold">11</div>
-                    <div className="text-sm">Languages</div>
+                    <div className="text-sm">{t('hero.stat.languages')}</div>
                   </div>
                 </div>
               </div>
@@ -130,7 +117,7 @@ export const Home: React.FC = () => {
               <div className="relative hidden lg:block">
                 <div className="absolute -inset-6 bg-white/10 rounded-3xl blur-2xl" />
                 <div className="relative rounded-2xl overflow-hidden ring-1 ring-white/15 shadow-2xl">
-                  <img src={heroImage} alt="YatriGuard" className="w-full h-[380px] object-cover" />
+                  <img src="/img.png" alt="YatriGuard" className="w-full h-[380px] object-cover" />
                 </div>
               </div>
             </div>
@@ -173,30 +160,30 @@ export const Home: React.FC = () => {
             <div>
               <div className="flex items-center space-x-2 mb-3">
                 <Shield className="w-5 h-5 text-primary" />
-                <span className="font-semibold">YatriGuard</span>
+                <span className="font-semibold">{t('brand.name')}</span>
               </div>
               <p className="text-sm text-muted-foreground">Blockchain-powered safety platform for travelers and families.</p>
             </div>
             <div>
-              <h5 className="font-semibold mb-3">Product</h5>
+              <h5 className="font-semibold mb-3">{t('footer.product')}</h5>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><button onClick={() => navigate('/digital-id')} className="hover:text-foreground">Digital ID</button></li>
-                <li><button onClick={() => navigate('/map')} className="hover:text-foreground">Safety Map</button></li>
-                <li><button onClick={() => navigate('/dashboard')} className="hover:text-foreground">Dashboard</button></li>
+                <li><button onClick={() => navigate('/digital-id')} className="hover:text-foreground">{t('footer.digitalId')}</button></li>
+                <li><button onClick={() => navigate('/map')} className="hover:text-foreground">{t('footer.safetyMap')}</button></li>
+                <li><button onClick={() => navigate('/dashboard')} className="hover:text-foreground">{t('footer.dashboard')}</button></li>
               </ul>
             </div>
             <div>
-              <h5 className="font-semibold mb-3">Resources</h5>
+              <h5 className="font-semibold mb-3">{t('footer.resources')}</h5>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>Privacy & Security</li>
-                <li>Help Center</li>
-                <li>Contact Support</li>
+                <li>{t('footer.privacy')}</li>
+                <li>{t('footer.help')}</li>
+                <li>{t('footer.contact')}</li>
               </ul>
             </div>
           </div>
           <div className="mt-8 border-t pt-6 text-xs text-muted-foreground flex items-center justify-between">
-            <span>© {new Date().getFullYear()} YatriGuard. All rights reserved.</span>
-            <span>Made with care for travelers</span>
+            <span>© {new Date().getFullYear()} {t('brand.name')}. All rights reserved.</span>
+            <span>{t('footer.madeWithCare')}</span>
           </div>
         </div>
       </footer>

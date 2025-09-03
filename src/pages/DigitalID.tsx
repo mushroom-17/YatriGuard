@@ -15,13 +15,17 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, Plus, Trash2 } from "lucide-react";
+import { CalendarIcon, Plus, Trash2, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const step1Schema = z.object({
   fullName: z.string().min(2, "Full name is required"),
   dob: z.date({ required_error: "Date of birth is required" }),
   gender: z.enum(["male", "female", "other"], { required_error: "Select gender" }),
   nationality: z.string().min(2, "Nationality is required"),
+  aadhaarNumber: z
+    .string()
+    .regex(/^\d{12}$/i, "Enter valid 12-digit Aadhaar number"),
   idDoc: z.instanceof(File).optional(),
   selfie: z.instanceof(File).optional(),
   mobile: z
@@ -32,7 +36,8 @@ const step1Schema = z.object({
   email: z.string().email("Enter valid email"),
 });
 
-const step2Schema = z.object({
+const step2Schema = z
+  .object({
   arrival: z.date({ required_error: "Arrival date is required" }),
   departure: z.date({ required_error: "Departure date is required" }),
   destinations: z.array(z.string().min(2, "Destination required")).min(1, "Add at least one destination"),
@@ -41,7 +46,11 @@ const step2Schema = z.object({
   accommodationName: z.string().min(2, "Accommodation name required"),
   accommodationAddress: z.string().min(5, "Address required"),
   bookingRef: z.string().optional(),
-});
+  })
+  .refine((data) =>
+    !data.arrival || !data.departure || (data.departure as Date).getTime() >= (data.arrival as Date).getTime(),
+    { message: "Departure must be on or after arrival", path: ["departure"] }
+  );
 
 const step3Schema = z.object({
   emergencyPrimaryName: z.string().min(2, "Name required"),
@@ -72,6 +81,7 @@ export interface FormValues extends FieldValues {
   dob?: Date;
   gender?: "male" | "female" | "other";
   nationality: string;
+  aadhaarNumber?: string;
   idDoc?: File;
   selfie?: File;
   mobile: string;
@@ -116,8 +126,14 @@ function DateField({ value, onChange, placeholder }: { value?: Date; onChange: (
 }
 
 export default function DigitalID() {
+  const { t } = useI18n();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [generated, setGenerated] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [generatedOtp, setGeneratedOtp] = useState<string | null>(null);
+  const [mobileVerified, setMobileVerified] = useState(false);
+  const [aadhaarVerified, setAadhaarVerified] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const navigate = useNavigate();
 
   const form = useForm<FormValues>({
@@ -128,6 +144,8 @@ export default function DigitalID() {
       locationConsent: undefined,
       consent: undefined as unknown as true,
       destinations: [""],
+      aadhaarNumber: "",
+      otp: "",
       accommodationName: "",
       accommodationAddress: "",
       bookingRef: "",
@@ -142,6 +160,104 @@ export default function DigitalID() {
   });
 
   const progress = useMemo(() => (step / 4) * 100, [step]);
+  const stepLabels = [
+    t('digital.steps.identity'),
+    t('digital.steps.trip'),
+    t('digital.steps.emergency'),
+    t('digital.steps.review'),
+  ] as const;
+
+  // Popular Indian destinations
+  const DESTINATIONS = useMemo(
+    () => [
+      "Agra",
+      "Jaipur",
+      "Udaipur",
+      "Goa",
+      "Mumbai",
+      "Delhi",
+      "Varanasi",
+      "Rishikesh",
+      "Manali",
+      "Leh",
+      "Mysuru",
+      "Bengaluru",
+      "Hyderabad",
+      "Chennai",
+      "Kolkata",
+      "Kochi",
+      "Munnar",
+      "Andaman",
+    ],
+    []
+  );
+
+  // Trip length calculation
+  const tripLengthDays = useMemo(() => {
+    const a = form.getValues("arrival");
+    const d = form.getValues("departure");
+    if (!a || !d) return null;
+    const diff = Math.ceil(((d as Date).getTime() - (a as Date).getTime()) / (1000 * 60 * 60 * 24));
+    return diff >= 0 ? diff : null;
+  }, [form.watch("arrival"), form.watch("departure")]);
+
+  // Verhoeff algorithm for Aadhaar checksum validation
+  const verhoeffValidate = (num: string) => {
+    const d = [
+      [0,1,2,3,4,5,6,7,8,9],
+      [1,2,3,4,0,6,7,8,9,5],
+      [2,3,4,0,1,7,8,9,5,6],
+      [3,4,0,1,2,8,9,5,6,7],
+      [4,0,1,2,3,9,5,6,7,8],
+      [5,9,8,7,6,0,4,3,2,1],
+      [6,5,9,8,7,1,0,4,3,2],
+      [7,6,5,9,8,2,1,0,4,3],
+      [8,7,6,5,9,3,2,1,0,4],
+      [9,8,7,6,5,4,3,2,1,0],
+    ];
+    const p = [
+      [0,1,2,3,4,5,6,7,8,9],
+      [1,5,7,6,2,8,3,0,9,4],
+      [5,8,0,3,7,9,6,1,4,2],
+      [8,9,1,6,0,4,3,5,2,7],
+      [9,4,5,3,1,2,6,8,7,0],
+      [4,2,8,6,5,7,3,9,0,1],
+      [2,7,9,3,8,0,6,4,1,5],
+      [7,0,4,6,9,1,3,2,5,8],
+    ];
+    const inv = [0,4,3,2,1,5,6,7,8,9];
+    let c = 0;
+    const reversed = num.replace(/\D/g, "").split("").reverse().map(Number);
+    for (let i = 0; i < reversed.length; i++) {
+      c = d[c][p[(i % 8)][reversed[i]]];
+    }
+    return c === 0;
+  };
+
+  const sendOtp = () => {
+    const code = (Math.floor(100000 + Math.random() * 900000)).toString();
+    setGeneratedOtp(code);
+    setOtpSent(true);
+    setMobileVerified(false);
+    // In a real app, send via SMS. For demo, log to console.
+    console.info("[Demo] OTP sent:", code);
+  };
+
+  const verifyOtp = () => {
+    const entered = form.getValues("otp") || "";
+    const ok = generatedOtp && entered === generatedOtp;
+    setMobileVerified(!!ok);
+  };
+
+  const verifyAadhaar = () => {
+    const num = (form.getValues("aadhaarNumber") || "").replace(/\s/g, "");
+    if (/^\d{12}$/.test(num) && verhoeffValidate(num)) {
+      setAadhaarVerified(true);
+    } else {
+      setAadhaarVerified(false);
+      form.setError("aadhaarNumber" as any, { type: "manual", message: t('val.aadhaar.invalidManual') });
+    }
+  };
 
   const validateCurrentStep = async () => {
     const values = form.getValues();
@@ -150,6 +266,16 @@ export default function DigitalID() {
       if (step === 2) await step2Schema.parseAsync(values);
       if (step === 3) await step3Schema.parseAsync(values);
       if (step === 4) await allSchema.parseAsync(values);
+      if (step === 1) {
+        if (!mobileVerified) {
+          form.setError("otp" as any, { type: "manual", message: t('val.verify.mobile') });
+          return false;
+        }
+        if (!aadhaarVerified) {
+          form.setError("aadhaarNumber" as any, { type: "manual", message: t('val.verify.aadhaar') });
+          return false;
+        }
+      }
       return true;
     } catch (e) {
       form.trigger();
@@ -188,25 +314,51 @@ export default function DigitalID() {
     try {
       localStorage.setItem("yg_digital_id", JSON.stringify(payload));
     } catch {}
-    navigate("/dashboard");
+    // Simulate blockchain write buffer before navigating
+    setProcessing(true);
+    setTimeout(() => {
+      setProcessing(false);
+      navigate("/dashboard");
+    }, 2000);
   };
 
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-8">
+    <div className="container mx-auto max-w-4xl px-4 py-8">
       <Card>
         <CardHeader>
-          <CardTitle>Digital Tourist ID (YatriGuard)</CardTitle>
+          <CardTitle className="text-2xl">{t('digital.title')}</CardTitle>
+          <p className="text-muted-foreground mt-1 text-sm">{t('digital.subtitle')}</p>
           <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-muted">
             <div className="h-2 rounded-full bg-primary transition-all" style={{ width: `${progress}%` }} />
           </div>
-          <p className="mt-2 text-sm text-muted-foreground">Step {step} of 4</p>
+          <div className="mt-3 grid grid-cols-4 gap-2">
+            {stepLabels.map((label, i) => {
+              const n = (i + 1) as 1 | 2 | 3 | 4;
+              const active = n === step;
+              const done = n < step;
+              return (
+                <div key={label} className="flex items-center gap-2">
+                  <span
+                    className={
+                      "inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold " +
+                      (done ? "bg-primary text-primary-foreground" : active ? "bg-primary/80 text-white" : "bg-muted text-muted-foreground")
+                    }
+                  >
+                    {n}
+                  </span>
+                  <span className={"text-xs " + (active ? "text-foreground" : "text-muted-foreground")}>{label}</span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-sm text-muted-foreground">{t('digital.step.hint')} {step} of 4</p>
         </CardHeader>
         <Form {...form}>
           <form onSubmit={(e)=>{ e.preventDefault(); step < 4 ? onNext() : onGenerate(); }}>
             <CardContent className="space-y-6">
               {step === 1 && (
-                <div className="space-y-4">
-                  <h3 className="font-semibold">Step 1: Identity & Verification</h3>
+                <div className="space-y-4 rounded-xl border bg-muted/30 p-5">
+                  <h3 className="font-semibold">{t('digital.step1.title')}</h3>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <FormField control={form.control} name="fullName" render={({ field }) => (
                       <FormItem>
@@ -231,7 +383,7 @@ export default function DigitalID() {
                         <FormLabel>Gender</FormLabel>
                         <FormControl>
                           <Select value={field.value} onValueChange={field.onChange}>
-                            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                            <SelectTrigger><SelectValue placeholder={t('generic.select')} /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="male">Male</SelectItem>
                               <SelectItem value="female">Female</SelectItem>
@@ -251,6 +403,26 @@ export default function DigitalID() {
                         <FormMessage />
                       </FormItem>
                     )} />
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <FormField control={form.control} name="aadhaarNumber" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Aadhaar Number</FormLabel>
+                        <FormControl>
+                          <div className="flex gap-2">
+                            <Input placeholder="12-digit Aadhaar" inputMode="numeric" maxLength={12} {...field} />
+                            <Button type="button" variant="secondary" onClick={verifyAadhaar}>Verify</Button>
+                          </div>
+                        </FormControl>
+                        {aadhaarVerified ? (
+                          <p className="text-green-600 flex items-center gap-1 text-xs"><CheckCircle className="h-3 w-3" /> Verified</p>
+                        ) : (
+                          <FormMessage />
+                        )}
+                      </FormItem>
+                    )} />
+                    <div />
                   </div>
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -277,18 +449,31 @@ export default function DigitalID() {
                       <FormItem>
                         <FormLabel>Mobile (OTP)</FormLabel>
                         <FormControl>
-                          <Input placeholder="+91 98765 43210" {...field} />
+                          <div className="flex gap-2">
+                            <Input placeholder="+91 98765 43210" {...field} />
+                            <Button type="button" variant="secondary" onClick={sendOtp}>{otpSent ? "Resend" : "Send OTP"}</Button>
+                          </div>
                         </FormControl>
                         <FormMessage />
+                        {otpSent && generatedOtp && !mobileVerified && (
+                          <p className="text-xs text-amber-600 mt-1">Demo OTP: <span className="font-semibold">{generatedOtp}</span></p>
+                        )}
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="otp" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Enter OTP</FormLabel>
                         <FormControl>
-                          <Input placeholder="123456" inputMode="numeric" {...field} />
+                          <div className="flex gap-2">
+                            <Input placeholder="123456" inputMode="numeric" maxLength={6} {...field} />
+                            <Button type="button" onClick={verifyOtp} variant="secondary">Verify</Button>
+                          </div>
                         </FormControl>
-                        <FormMessage />
+                        {mobileVerified ? (
+                          <p className="text-green-600 flex items-center gap-1 text-xs"><CheckCircle className="h-3 w-3" /> Mobile verified</p>
+                        ) : (
+                          <FormMessage />
+                        )}
                       </FormItem>
                     )} />
                   </div>
@@ -306,8 +491,8 @@ export default function DigitalID() {
               )}
 
               {step === 2 && (
-                <div className="space-y-4">
-                  <h3 className="font-semibold">Step 2: Trip Details</h3>
+                <div className="space-y-4 rounded-xl border bg-muted/30 p-5">
+                  <h3 className="font-semibold">{t('digital.step2.title')}</h3>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <FormField control={form.control} name="arrival" render={({ field }) => (
                       <FormItem>
@@ -329,6 +514,10 @@ export default function DigitalID() {
                     )} />
                   </div>
 
+                  {tripLengthDays !== null && (
+                    <div className="text-sm text-muted-foreground">{t('digital.trip.length')}: <span className="font-medium text-foreground">{tripLengthDays} day(s)</span></div>
+                  )}
+
                   <div className="space-y-2">
                     <FormLabel>Destinations</FormLabel>
                     <div className="space-y-2">
@@ -340,7 +529,16 @@ export default function DigitalID() {
                             render={({ field }) => (
                               <FormItem className="flex-1">
                                 <FormControl>
-                                  <Input placeholder={`Destination ${idx + 1} (e.g., Jaipur)`} {...field} />
+                                  <Select value={field.value} onValueChange={field.onChange}>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder={`Destination ${idx + 1}`} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {DESTINATIONS.map((d) => (
+                                        <SelectItem key={d} value={d}>{d}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -358,7 +556,7 @@ export default function DigitalID() {
                         </div>
                       ))}
                       <Button type="button" variant="outline" onClick={() => addDestination("")}>
-                        <Plus className="mr-2 h-4 w-4" /> Add destination
+                        <Plus className="mr-2 h-4 w-4" /> {t('digital.add.destination')}
                       </Button>
                     </div>
                   </div>
@@ -379,7 +577,7 @@ export default function DigitalID() {
                         <FormLabel>Mode of Travel</FormLabel>
                         <FormControl>
                           <Select value={field.value} onValueChange={field.onChange}>
-                            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                            <SelectTrigger><SelectValue placeholder={t('generic.select')} /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="flight">Flight</SelectItem>
                               <SelectItem value="train">Train</SelectItem>
@@ -425,8 +623,8 @@ export default function DigitalID() {
               )}
 
               {step === 3 && (
-                <div className="space-y-4">
-                  <h3 className="font-semibold">Step 3: Emergency & Safety Info</h3>
+                <div className="space-y-4 rounded-xl border bg-muted/30 p-5">
+                  <h3 className="font-semibold">{t('digital.step3.title')}</h3>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <FormField control={form.control} name="emergencyPrimaryName" render={({ field }) => (
                       <FormItem className="sm:col-span-1">
@@ -481,7 +679,7 @@ export default function DigitalID() {
                         <FormLabel>Blood Group (optional)</FormLabel>
                         <FormControl>
                           <Select value={field.value} onValueChange={field.onChange}>
-                            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                            <SelectTrigger><SelectValue placeholder={t('generic.select')} /></SelectTrigger>
                             <SelectContent>
                               {(["A+","A-","B+","B-","AB+","AB-","O+","O-"] as const).map(bg => (
                                 <SelectItem key={bg} value={bg}>{bg}</SelectItem>
@@ -527,10 +725,10 @@ export default function DigitalID() {
               )}
 
               {step === 4 && (
-                <div className="space-y-4">
-                  <h3 className="font-semibold">Step 4: Review & Generate</h3>
+                <div className="space-y-4 rounded-xl border bg-muted/30 p-5">
+                  <h3 className="font-semibold">{t('digital.step4.title')}</h3>
                   <div className="space-y-2 text-sm">
-                    <p className="text-muted-foreground">Preview your details below.</p>
+                    <p className="text-muted-foreground">{t('digital.preview')}</p>
                     <pre className="whitespace-pre-wrap rounded-md bg-muted p-4 text-xs">
 {JSON.stringify(form.getValues(), (key, val) => (val instanceof File ? { name: val.name, size: val.size } : val), 2)}
                     </pre>
@@ -540,7 +738,7 @@ export default function DigitalID() {
                       <Checkbox id="consent" checked={!!field.value} onCheckedChange={(v)=> field.onChange(Boolean(v))} />
                       <div className="grid gap-1.5 leading-none">
                         <FormLabel htmlFor="consent" className="font-normal">
-                          I agree to secure storage on blockchain for trip duration.
+                          {t('digital.consent')}
                         </FormLabel>
                         <FormMessage />
                       </div>
@@ -552,20 +750,29 @@ export default function DigitalID() {
               )}
             </CardContent>
 
-            <CardFooter className="flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">Use Back and Next to navigate. Your data stays on this device until you generate.</div>
+            <CardFooter className="flex items-center justify-between border-t pt-4">
+              <div className="text-sm text-muted-foreground">{t('digital.hint.navigate')}</div>
               <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={onPrev} disabled={step === 1}>Back</Button>
+                <Button size="lg" type="button" variant="outline" onClick={onPrev} disabled={step === 1}>{t('digital.btn.back')}</Button>
                 {step < 4 ? (
-                  <Button type="submit">Next</Button>
+                  <Button size="lg" type="submit">{t('digital.btn.next')}</Button>
                 ) : (
-                  <Button type="submit" onClick={onGenerate}>Generate ID</Button>
+                  <Button size="lg" type="submit" onClick={onGenerate}>{t('digital.btn.generate')}</Button>
                 )}
               </div>
             </CardFooter>
           </form>
         </Form>
       </Card>
+      {processing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3 rounded-lg border bg-card p-6 text-center shadow-lg">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <p className="text-sm font-medium">Securing Digital ID on blockchain…</p>
+            <p className="text-xs text-muted-foreground">This may take a few seconds.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

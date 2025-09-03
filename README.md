@@ -1,73 +1,86 @@
-# Welcome to your Lovable project
+# YatriGuard
 
-## Project info
+YatriGuard is a safety-first travel assistant for India. It helps travelers generate a Digital ID, share trip details with emergency contacts, and access an SOS dashboard. The app supports multiple Indian languages and uses a modern, accessible UI.
 
-**URL**: https://lovable.dev/projects/17579a0d-9ba1-4bac-8801-9f59f87221c6
+## Features
 
-## How can I edit this code?
+- Multi-step Digital ID form with:
+  - Aadhaar checksum (Verhoeff) validation
+  - Demo mobile OTP verification
+  - Final consent step
+- Language support via lightweight i18n (`src/i18n/`)
+- Dashboard with quick actions and SOS
+- Responsive UI with shadcn/ui (Radix) + Tailwind
+- Client-side routing (React Router)
 
-There are several ways of editing your application.
+## Tech Stack
 
-**Use Lovable**
+- Vite + React + TypeScript
+- Tailwind CSS + shadcn/ui (Radix UI)
+- React Hook Form + Zod
+- React Router
+- date-fns, lucide-react
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/17579a0d-9ba1-4bac-8801-9f59f87221c6) and start prompting.
+## Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
+Prerequisites: Node.js 18+ and npm
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Open http://localhost:5173 in your browser.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Scripts
 
-**Use GitHub Codespaces**
+- npm run dev — Start dev server
+- npm run build — Production build
+- npm run build:dev — Development-mode build
+- npm run preview — Preview prod build locally
+- npm run lint — Lint the project
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Project Structure
 
-## What technologies are used for this project?
+```
+public/            # Static assets
+src/
+  components/      # UI components (Navigation, Layout, ui/*)
+  pages/           # Pages (Home, DigitalID, SignIn, Dashboard, etc.)
+  i18n/            # I18n provider and translations
+  hooks/, context/ # Custom hooks and providers
+  assets/          # Images and media
+```
 
-This project is built with:
+Key files:
+- src/pages/DigitalID.tsx — Multi-step Digital ID flow
+- src/pages/SignIn.tsx — Email/Name sign-in with i18n validation
+- src/i18n/I18nProvider.tsx — i18n context and `t()` helper
+- src/i18n/translations.ts — Language dictionaries
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Internationalization
 
-## How can I deploy this project?
+- Add/modify keys in `src/i18n/translations.ts` for each language
+- Use in components with:
+  ```ts
+  const { t } = useI18n();
+  t('some.key');
+  ```
 
-Simply open [Lovable](https://lovable.dev/projects/17579a0d-9ba1-4bac-8801-9f59f87221c6) and click on Share -> Publish.
+## Notes
 
-## Can I connect a custom domain to my Lovable project?
+- On Digital ID submit, the app simulates a short “blockchain processing” buffer with a spinner, then navigates to the dashboard.
+- OTP flow is demo-only (code is logged to console in dev).
 
-Yes, you can!
+## Deployment
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Build and serve the `dist/` folder on any static host (Netlify, Vercel, GitHub Pages, etc.):
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+```bash
+npm run build
+npm run preview  # optional local check
+```
+
+## License
+
+MIT

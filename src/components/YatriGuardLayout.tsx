@@ -1,5 +1,5 @@
 import React from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { SOSButton } from "./SOSButton";
 import { Navigation } from "./Navigation";
 
@@ -8,16 +8,19 @@ interface YatriGuardLayoutProps {
 }
 
 export const YatriGuardLayout: React.FC<YatriGuardLayoutProps> = ({ children }) => {
+  const { pathname } = useLocation();
+  const showBottomNav = pathname === "/dashboard"; // show nav only on Dashboard
+
   return (
     <div className="min-h-screen bg-background relative">
       {/* Main Content */}
-      <main className="pb-20">
+      <main className={showBottomNav ? "pb-20" : "pb-0"}>
         {children || <Outlet />}
       </main>
-      
-      {/* Bottom Navigation */}
-      <Navigation />
-      
+
+      {/* Bottom Navigation (Dashboard only) */}
+      {showBottomNav && <Navigation />}
+
       {/* Always Visible SOS Button */}
       <SOSButton />
     </div>
